@@ -1,34 +1,34 @@
 const {
     addMessage,
-    getConversations,
-    createConversation,
+    getRooms,
+    createRoom,
     addMemberToGroup
 } = require("../models/chatModel");
 
 
-const createSoketConversation = async (sender, otherMemberIds, conversationName) => {
+const createSoketRoom = async (sender, otherMemberIds, conversationName) => {
 
     const memberIds = [sender, ...otherMemberIds];
-    const newConversationId = await createConversation(
+    const newRoomId = await createRoom(
         sender,
         memberIds,
         conversationName
     );
-    await addMemberToGroup(memberIds, newConversationId);
+    await addMemberToGroup(memberIds, newRoomId);
 
 
-    return newConversationId
+    return newConversationId;
 
-}
+};
 
 const joinRoom = async (socket, userId, activeUsers) => {
     console.log(userId);
     try {
         activeUsers.set(userId, socket);
-        const conversations = await getConversations(userId);
-        console.log(conversations);
-        for (var conversation of conversations) {
-            socket.join(conversation);
+        const rooms = await getRooms(userId);
+        console.log(rooms);
+        for (var room of rooms) {
+            socket.join(room);
         }
     } catch (error) {
         console.log(error);
@@ -38,15 +38,15 @@ const joinRoom = async (socket, userId, activeUsers) => {
 const sendMessage = async (socket, activeUsers, payload) => {
     try {
         const createTime = new Date();
-        const { sender, otherMemberIds, conversationName } = payload
-        const conversationId = payload.conversationId || createSoketConversation(sender, otherMemberIds, conversationName)
+        const { sender, otherMemberIds, roomName } = payload;
+        const roomId = payload.roomId || createSoketRoom(sender, otherMemberIds, roomName);
 
-        if (!payload.conversationId) {
-            socket.join(conversationId)
+        if (!payload.roomId) {
+            socket.join(roomId);
             for (var memberId of otherMemberIds) {
                 if (activeUsers.has(memberId)) {
-                    const memberSocket = activeUsers.get(memberId)
-                    memberSocket.join(conversationId)
+                    const memberSocket = activeUsers.get(memberId);
+                    memberSocket.join(roomId);
 
                 }
             }
@@ -67,4 +67,4 @@ const sendMessage = async (socket, activeUsers, payload) => {
 
 };
 
-module.exports = { sendMessage, joinRoom };
+module.exports = { sendMessage, joinRoom, createSoketRoom };

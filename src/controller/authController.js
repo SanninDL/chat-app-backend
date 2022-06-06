@@ -1,45 +1,67 @@
-const { createAccessToken, createRefreshToken, refreshTokenList } = require("../middleware/JwtAction");
-const { findUser, createUser, checkExist } = require("../models/authModel");
+const jwt = require("jsonwebtoken");
 
+const { convertUser } = require('../helper/convertData');
+const { createAccessToken, createRefreshToken } = require("../middleware/JwtAction");
+const { findUser, createUser, checkExist, findUserWithId } = require("../models/authModel");
 
 
 const handleLogin = async (req, res) => {
-    console.log('login ', req.body)
-
     const { email, password } = req.body;
     try {
         const user = await findUser(email, password);
         if (user) {
-            const accessToken = createAccessToken({ id: user.id })
-            const freshToken = createRefreshToken({ id: user.id })
-            res.cookie("refreshToken", freshToken, {
-                httpOnly: true,
-                secure: false,
-                path: "/",
-                sameSite: "strict",
-            });
+            const accessToken = createAccessToken({ userId: user.user_id });
+            const refreshToken = createRefreshToken({ userId: user.user_id });
+            // res.cookie("refreshToken", refreshToken, {
+            //     httpOnly: true,
+            //     secure: false,
+            //     path: "/",
+            //     sameSite: "strict",
+            // });
+            const userData = convertUser(user);
             res.json({
-                isSucces: true,
+                isSuccess: true,
                 data: {
-                    accessToken: accessToken
+                    accessToken,
+                    refreshToken,
+                    user: userData
                 }
 
             });
         } else {
-            res.json({ isSucces: false });
+            res.json({ isSuccess: false, data: null });
         }
     } catch (error) {
         console.log(error);
     }
 };
+const loginWithAccesToken = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const user = await findUserWithId(userId);
+
+        if (user) {
+            res.json({
+                isSuccess: true,
+                data: {
+                    user: convertUser(user)
+                }
+            });
+        }
+    } catch (error) {
+
+    }
+
+};
 const handleRegister = async (req, res) => {
     const { userName, email, password } = req.body;
     try {
-        const isExist = checkExist(email)
+        const isExist = checkExist(email);
         if (!isExist) {
             const id = await createUser(userName, email, password);
-            const accessToken = createToken({ id: user.id })
-            const freshToken = createRefreshToken({ id: id })
+            const accessToken = createToken({ userId: id });
+            const freshToken = createRefreshToken({ userId: id });
 
             res.cookie("refreshToken", freshToken, {
                 httpOnly: true,
@@ -58,47 +80,34 @@ const handleRegister = async (req, res) => {
             res.json({
                 isSucces: false,
                 message: 'email already exists'
-            })
+            });
         }
     } catch (error) {
         console.log(error);
-        res.status(500)
+        res.status(500);
     }
 };
 const refreshToken = (req, res) => {
-    const refreshToken = req.cookies.refreshToken
+    const refreshToken = req.body.refreshToken;
+
     if (!refreshToken) {
-        return res.status(401).json("You're not authenticated")
+        return res.status(401).json("You're not authenticated");
     }
-    if (!refreshTokenList.includes(refreshToken)) {
-        return res.status(403).json("Refresh token is not valid");
-    }
-    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, function (err, userId) {
+
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, function (err, { userId }) {
         if (err) {
-            console.log(err)
             return res.status(403).json("Refresh token is not valid");
         }
-        refreshTokenList = refreshTokenList.filter(token => token !== refreshToken)
 
-        const newAccessToken = createAccessToken({ id: userId })
-        const newRefreshToken = createRefreshToken({ id: userId })
-
-        refreshTokenList.push(newRefreshToken)
-
-        res.cookie("refreshToken", newRefreshToken, {
-            httpOnly: true,
-            secure: false,
-            path: "/",
-            sameSite: "strict",
+        const newAccessToken = createAccessToken({ userId: userId });
+        const newRefreshToken = createRefreshToken({ userId: userId });
+        res.status(200).json({
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken
         });
 
-        res.status(200).json({
-            accessToken: newAccessToken
-        })
 
+    });
 
-    })
-
-
-}
-module.exports = { handleLogin, handleRegister, refreshToken };
+};
+module.exports = { handleLogin, handleRegister, refreshToken, loginWithAccesToken };

@@ -5,7 +5,8 @@ const mysql = require("mysql2/promise");
 const pool = mysql.createPool({
     host: "localhost",
     user: "root",
-    database: "chat-app"
+    database: "chat_app",
+    password: "Mr123456"
 });
 
 module.exports = pool;

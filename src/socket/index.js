@@ -4,7 +4,6 @@ const activeUsers = new Map();
 
 const initSocket = (io) => {
     io.on("connection", (socket) => {
-        console.log("a user connect ", socket.rooms);
         socket.on("join_chat", (userId) => {
             joinRoom(socket, userId);
         });
