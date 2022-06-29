@@ -1,11 +1,11 @@
 
 const { convertRoomList } = require('../helper/convertData');
-const { findUser } = require("../models/authModel");
-const chatModel = require("../models/chatModel");
+const messageModel = require('../models/messageModel');
+const roomModel = require('../models/roomModel');
 
 const getRooms = async (req, res) => {
     const { userId } = req.params;
-    const rooms = await chatModel.getRooms(userId);
+    const rooms = await roomModel.getRooms(userId);
 
 
     res.json({
@@ -17,10 +17,24 @@ const getRooms = async (req, res) => {
 
 
 const getMessages = async (req, res) => {
-    const roomId = req.body.roomId;
-    const messages = await chatModel.getAllMessage(roomId);
-    console.log('mes ', messages);
-    res.json({ message: "OK", data: messages });
+    try {
+        const { roomId } = req.params;
+        const messages = await messageModel.getAllMessage(roomId);
+        res.json({
+            isSuccess: true,
+            msg: "OK",
+            data: {
+                messages: messages
+            }
+        });
+    } catch (error) {
+        res.json({
+            isSuccess: false,
+            msg: error.message,
+            data: null
+        });
+    }
+
 };
 
 module.exports = { getRooms, getMessages };

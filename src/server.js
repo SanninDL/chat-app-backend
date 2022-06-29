@@ -5,7 +5,9 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
-var morgan = require('morgan');
+
+
+const morgan = require('morgan');
 
 
 const router = require("./routes");

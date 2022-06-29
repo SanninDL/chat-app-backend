@@ -1,70 +1,53 @@
-const {
-    addMessage,
-    getRooms,
-    createRoom,
-    addMemberToGroup
-} = require("../models/chatModel");
+const { convertUser, convertMessage } = require('../helper/convertData');
+const { findUserWithId } = require('../models/authModel');
+const messageModel = require("../models/messageModel");
+const roomModel = require('../models/roomModel');
 
+const createSoketRoom = async (payload) => {
+    const { adminId, otherMemberIds, roomName, roomAvatar } = payload;
+    const memberIds = [senderId, ...otherMemberIds];
 
-const createSoketRoom = async (sender, otherMemberIds, conversationName) => {
-
-    const memberIds = [sender, ...otherMemberIds];
-    const newRoomId = await createRoom(
-        sender,
-        memberIds,
-        conversationName
+    const newRoomId = await roomModel.createRoom(
+        adminId,
+        roomName,
+        roomAvatar
     );
-    await addMemberToGroup(memberIds, newRoomId);
 
+    await roomModel.addMemberToGroup(memberIds, newRoomId);
 
-    return newConversationId;
-
+    return newRoomId;
 };
 
-const joinRoom = async (socket, userId, activeUsers) => {
-    console.log(userId);
+const joinRoom = async (socket, userId) => {
     try {
-        activeUsers.set(userId, socket);
-        const rooms = await getRooms(userId);
-        console.log(rooms);
+        const rooms = await roomModel.getRooms(userId);
         for (var room of rooms) {
-            socket.join(room);
+            socket.join(room.room_id);
         }
     } catch (error) {
         console.log(error);
     }
 };
 
-const sendMessage = async (socket, activeUsers, payload) => {
+const sendMessage = async (payload, io) => {
+    console.log("🚀 ~ payload", payload);
     try {
-        const createTime = new Date();
-        const { sender, otherMemberIds, roomName } = payload;
-        const roomId = payload.roomId || createSoketRoom(sender, otherMemberIds, roomName);
+        const { senderId, roomId } = payload;
 
-        if (!payload.roomId) {
-            socket.join(roomId);
-            for (var memberId of otherMemberIds) {
-                if (activeUsers.has(memberId)) {
-                    const memberSocket = activeUsers.get(memberId);
-                    memberSocket.join(roomId);
+        const newMessageId = await messageModel.addMessage(payload);
 
-                }
-            }
-        }
+        const newMessage = await messageModel.getMessage(newMessageId);
 
-        const data = {
-            ...payload,
-            createdAt: createTime
-        };
-
-        const senderInfo = await addMessage(data);
-        socket
-            .to(conversationId)
-            .emit("receive_message", { ...data, ...senderInfo });
+        io
+            .to(roomId)
+            .emit("message", { ...newMessage });
+        // .emit("message", { ...payload, sender: convertUser(sender) });
     } catch (error) {
         console.log(error);
     }
 
 };
+
+
 
 module.exports = { sendMessage, joinRoom, createSoketRoom };

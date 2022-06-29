@@ -11,10 +11,14 @@ const convertMessage = (message) => {
     return {
         messageId: message.message_id,
         roomId: message.room_id,
-        userId: message.user_id,
         messageText: message.message_text,
         createdAt: message.created_at,
-        isRead: message.is_read
+        isRead: message.is_read,
+        sender: {
+            userId: message.user_id,
+            avatar: message.avatar,
+            displayName: message.display_name
+        }
     };
 };
 const convertRoom = (room) => {
